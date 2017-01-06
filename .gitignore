@@ -3,6 +3,7 @@
 # compiled output
 /dist
 /tmp
+/build
 
 # dependencies
 /node_modules
@@ -14,6 +15,7 @@
 .c9/
 *.launch
 .settings/
+.gradle
 
 # IDE - VSCode
 .vscode/*

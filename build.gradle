@@ -1,0 +1,85 @@
+buildscript {
+  ext {
+    gradleNodePluginVersion = '1.0.1'
+    nodejsVersion = '6.9.4'
+  }
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "com.moowork.gradle:gradle-node-plugin:$gradleNodePluginVersion"
+  }
+}
+
+apply plugin: 'com.moowork.node'
+apply plugin: 'java'
+
+ext {
+  ngScript = project.file('node_modules/.bin/ng')
+  ngArgs = project.properties['args']
+  artifactName = 'gng2'
+  artifactVersion = '1.0'
+}
+
+node {
+  version = nodejsVersion
+  download = true
+}
+
+jar {
+  baseName = artifactName
+  version = artifactVersion
+}
+
+task ng(type: NodeTask, dependsOn: 'npmInstall') {
+  script = ngScript
+  args = ngArgs == null ? [] : project.properties['args'].split(' ').collect()
+
+  doFirst {
+    if (ngArgs == null || ngArgs.trim().isEmpty()) {
+      throw new GradleException("Project property 'args' is missing or invalid for the ng task\n" +
+        "Usage examples:\n" +
+        "  gradle ng -Pargs=help\n" +
+        "  gradle ng -Pargs='build --prod'")
+    }
+  }
+}
+
+task ngServe(type: NodeTask, dependsOn: 'npmInstall') {
+  script = ngScript
+  args = ['serve']
+}
+
+task ngTest(type: NodeTask, dependsOn: 'npmInstall') {
+  script = ngScript
+  args = ['test']
+}
+
+task ngBuildProd(type: NodeTask, dependsOn: 'npmInstall') {
+  script = ngScript
+  args = ['build', '--prod']
+}
+
+task copyProd() {
+  dependsOn ngBuildProd
+
+  doLast {
+    String toPath = "$buildDir/resources/main/META-INF/resources/webjars/$artifactName/$artifactVersion"
+    String fromPath = "dist"
+
+    copy {
+      into(toPath)
+      from(fromPath)
+    }
+
+    copy {
+      into(toPath)
+      from(fromPath) { include '**/*.bundle.css', '**/*.bundle.js' }
+      rename { it.replaceAll(/\.[^.]+\.bundle/, '.bundle') }
+    }
+  }
+}
+
+jar.dependsOn copyProd
